@@ -4,8 +4,10 @@ import {Loader} from "./components/Loader";
 import Keyboard from "./components/Keyboard";
 import Board from "./components/Board";
 
-let globalFila = 0;
-let globalColumna = 0;
+let WordlES;
+let currentFila = 0;
+let currentColumna = 0;
+let gameO = false;
 
 
 function App() {
@@ -13,58 +15,47 @@ function App() {
   const forceUpdate = React.useCallback(() => updateState({}), []);
 
 
-  const [word, setWord] = React.useState("");
+
+  const [gameOver, setGameOver] = React.useState({
+    gameOver: false,
+    guessedWord: false,
+  });
+  const [word, setWord] = React.useState();
   const [array, setArray] = React.useState([
     ["","","","",""],
     ["","","","",""],
     ["","","","",""],
     ["","","","",""],
     ["","","","",""]
-  ]);
+]);
 
-  const [gameOver, setGameOver] = React.useState({
-    gameOver: false,
-    guessedWord: false,
-  });
-
-  const [currentFila, setCurrentFila] = React.useState(0);
-  const [currentColumna, setCurrentColumna] = React.useState(0);
-
-  const cambiarPosicion = (fila, columna) => {
-    setCurrentFila(fila);
-    setCurrentColumna(columna);
-  }
 
   React.useEffect(() => {
-    console.log("USEEFFECT TO SEE CHANGES IN FILA AND COLUMNA: ",currentFila);
-    globalFila = currentFila;
-  },[currentFila])
+    gameO = gameOver.gameOver;
+  }, [gameOver]);
   React.useEffect(() => {
-    console.log("USEEFFECT TO SEE CHANGES IN FILA AND COLUMNA: ",currentColumna);
-    globalColumna = currentColumna;
-  },[currentColumna])
+    WordlES = word;
+  }, [word]);
 
   React.useEffect(() => {
     const fetchData = async () => {
-      
+
       // get the data from the api
       const data = await selectRandomWord();
+  
       // set state with the result
-      console.log(data);
-      cambiarPosicion(0,0);
       setWord(data);
     }
-    
+  
     // call the function
     fetchData()
-    console.log(word);
     document.body.addEventListener('keyup', (event)=>{handleKeyboardKeyUp(event)});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
 
 
   const handleKeyboardClick = (event) => {
-    if(!gameOver.gameOver){
+    if(!gameO){
       if( /([a-zA-Z]){1}/.test(event.target.dataset.letter) && event.target.dataset.letter !== "backspace" && event.target.dataset.letter !== "enter" ){
         handleKeyboard(event.target.dataset.letter);
       }else if( event.target.dataset.letter === "enter" ){
@@ -75,9 +66,7 @@ function App() {
     }
   }
   const handleKeyboardKeyUp = (event) => {
-    if(!gameOver.gameOver){
-      console.log(event.code);
-
+    if(!gameO){
       if( /([a-zA-Z]){1}/.test(event.code.replace("Key","")) && event.code.replace("Key","").length === 1 ){
         handleKeyboard( event.code.replace("Key","") );
       }else if( event.code === "Enter" ){
@@ -91,52 +80,48 @@ function App() {
 
 
   const handleKeyboardEnter = async () => {
-    let fila = globalFila;
-    let columna = globalColumna;
-    let currrentWord = word;
-    console.log("currentWord: ",currrentWord);
+    let fila = currentFila;
+    let columna = currentColumna;
+    let currrentWord = WordlES;
     
     let newArray = [...array];
+
 
     if (newArray[fila][4] === ""){
       console.log("\n====== 5 SLOT EMPTY ======\n fila:",fila)
       return;
     }
-    // console.log("\n====== "+WordlES+" ======\n")
+
     let currWord = "";
     for (let i = 0; i < 5; i++) {
       currWord += newArray[fila][i].toLowerCase();
     }
     if(await verifyWordExist(currWord)){
-      console.log("\n====== WORD EXIST ======\n")
       fila++
       columna = 0;
     } else {
-      console.log("\n====== WORD DOES'T EXIST ======\n")
       return;
     }
 
     if(currWord === currrentWord) {
-      console.log("\n====== PALABRA CORRECTA ======\n")
-      setGameOver({ gameOver: true, guessedWord: true });
       //establecer colores de succes a la fila correcta
-      newArray[fila-1][0] = {letter: currrentWord.split("")[0].toUpperCase() , status: letterStatus(currWord , 0), wins: true };
-      newArray[fila-1][1] = {letter: currrentWord.split("")[1].toUpperCase() , status: letterStatus(currWord , 1), wins: true };
-      newArray[fila-1][2] = {letter: currrentWord.split("")[2].toUpperCase() , status: letterStatus(currWord , 2), wins: true };
-      newArray[fila-1][3] = {letter: currrentWord.split("")[3].toUpperCase() , status: letterStatus(currWord , 3), wins: true };
-      newArray[fila-1][4] = {letter: currrentWord.split("")[4].toUpperCase() , status: letterStatus(currWord , 4), wins: true };
+      newArray[fila-1][0] = {letter: currrentWord.split("")[0].toUpperCase() , status: letterStatus(currrentWord, currWord , 0), wins: true };
+      newArray[fila-1][1] = {letter: currrentWord.split("")[1].toUpperCase() , status: letterStatus(currrentWord, currWord , 1), wins: true };
+      newArray[fila-1][2] = {letter: currrentWord.split("")[2].toUpperCase() , status: letterStatus(currrentWord, currWord , 2), wins: true };
+      newArray[fila-1][3] = {letter: currrentWord.split("")[3].toUpperCase() , status: letterStatus(currrentWord, currWord , 3), wins: true };
+      newArray[fila-1][4] = {letter: currrentWord.split("")[4].toUpperCase() , status: letterStatus(currrentWord, currWord , 4), wins: true };
+      setGameOver({ gameOver: true, guessedWord: true });
       forceUpdate();
       return;
     }else{
-      console.log("\n====== PALABRA INCORRECTA ======\n")
-      newArray[fila-1][0] = {letter: currWord.split("")[0], status: letterStatus(currWord , 0) };
-      newArray[fila-1][1] = {letter: currWord.split("")[1], status: letterStatus(currWord , 1) };
-      newArray[fila-1][2] = {letter: currWord.split("")[2], status: letterStatus(currWord , 2) };
-      newArray[fila-1][3] = {letter: currWord.split("")[3], status: letterStatus(currWord , 3) };
-      newArray[fila-1][4] = {letter: currWord.split("")[4], status: letterStatus(currWord , 4) };
+      newArray[fila-1][0] = {letter: currWord.split("")[0], status: letterStatus(currrentWord, currWord , 0) };
+      newArray[fila-1][1] = {letter: currWord.split("")[1], status: letterStatus(currrentWord, currWord , 1) };
+      newArray[fila-1][2] = {letter: currWord.split("")[2], status: letterStatus(currrentWord, currWord , 2) };
+      newArray[fila-1][3] = {letter: currWord.split("")[3], status: letterStatus(currrentWord, currWord , 3) };
+      newArray[fila-1][4] = {letter: currWord.split("")[4], status: letterStatus(currrentWord, currWord , 4) };
 
     }
-    // console.log(fila);
+
     if (fila === 5) {
       setGameOver({ gameOver: true, guessedWord: false });
       return;
@@ -144,12 +129,10 @@ function App() {
 
 
     setArray(newArray);
-    cambiarPosicion(fila,columna);
+    currentFila = fila;
+    currentColumna = columna;
   }
-  //function for know the correct result of a guess
-  const letterStatus = ( currentWord , pos ) => {
-    console.log(word)
-    const correctWord = word;
+  const letterStatus = ( correctWord, currentWord , pos ) => {
     let correctArray = correctWord.split("");
     let currentWordArray = currentWord.split("");
 
@@ -160,7 +143,7 @@ function App() {
     if(correctArray.includes(currentWordArray[pos])){ 
       let aparicionesLetra = 0;
       correctArray.forEach(letter=>{
-        if(letter === currentWordArray[pos]){
+         if(letter === currentWordArray[pos]){
           aparicionesLetra++;
         }
       })
@@ -170,31 +153,45 @@ function App() {
     }
 
 
+    document.querySelector(`button[data-letter="${currentWordArray[pos]}"]`).setAttribute("disabled", "disabled");
+    document.querySelector(`button[data-letter="${currentWordArray[pos]}"]`).classList.add("disabled:opacity-25");
     return "error";
   }
 
   const handleKeyboardRemove = () => {
-    let fila = globalFila;
-    let columna = globalColumna;
+    if(!gameO){
+    let fila = currentFila;
+    let columna = currentColumna;
     let newArray = [...array];
 
-    if (newArray[fila][columna] === ""){
+    if (newArray[fila][0] === ""){
       return;
+    }else{
+      if(newArray[fila][columna] === ""){
+        if(newArray[fila][columna-1] === "" ){
+          return;
+        }
+        newArray[fila][columna-1] = "";
+      }else{
+        newArray[fila][columna] = "";
+      }
     }
-    console.log(fila,columna)
-    newArray[fila][columna] = "";
+
+
     
     if(columna !== 0){
-      cambiarPosicion(fila,columna-1);
+      currentColumna=columna-1;
     }
 
     setArray(newArray);
+    }
   }
 
 
   const handleKeyboard = (letter) => {
-    let fila = globalFila;
-    let columna = globalColumna;
+    if(!gameO){
+    let fila = currentFila;
+    let columna = currentColumna;
     console.log(fila,columna)
     let newArray = [...array];
 
@@ -210,7 +207,8 @@ function App() {
       }
 
     setArray(newArray);
-    cambiarPosicion(fila,columna);
+    currentColumna=columna;
+    }
   }
 
   return (
