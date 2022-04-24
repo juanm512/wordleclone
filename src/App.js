@@ -59,6 +59,7 @@ function App() {
     fetchData()
     console.log(word);
     document.body.addEventListener('keyup', (event)=>{handleKeyboardKeyUp(event)});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
